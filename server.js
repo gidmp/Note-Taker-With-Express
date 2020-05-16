@@ -8,26 +8,33 @@ const app = express();
 // Sets port for listening and let heroku decide on port, if not, use port 8080
 const PORT = process.env.PORT || 8000;
 
+//serve images, CSS files, and JavaScript files in a directory named public
+app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-//serve images, CSS files, and JavaScript files in a directory named public
-app.use(express.static("public"));
 
+//route to index.html
 
 //route to notes.html
 app.get("/notes", function(req, res) {
-    res.sendFile(path.join(__dirname, "./public/notes.html"));
-});
-
-//route to index.html
-app.get("*", function(req, res) {
-    res.sendFile(path.join(__dirname, "./public/index.html"));
+    res.sendFile(path.join(__dirname, "/public/notes.html"));
 });
 
 //route to read the `db.json` file and return all saved notes as JSON.
 app.get("/api/notes", function(req, res) {
-    res.sendFile(path.join(__dirname, "./db/db.json"));
+    res.sendFile(path.join(__dirname, "/db/db.json"));
 });
+
+//get note api based on their id
+app.get("/api/notes/:id", function(req, res) {
+    let noteList = JSON.parse(fs.readFileSync("./db/db.json", "utf8"));
+    res.json(noteList[parseInt(req.params.id)]);
+});
+
+app.get("*", function(req, res) {
+    res.sendFile(path.join(__dirname, "/public/index.html"));
+});
+
 
 //receive a new note to save on the request body, add it to the `db.json` file, 
 //and then return the new note to the client.
@@ -45,31 +52,22 @@ app.post("/api/notes", function(req, res) {
     fs.writeFileSync("./db/db.json", JSON.stringify(noteList));
     res.json(noteList);
 
-    console.log(newNote);
 
 
 })
 
-//get note api based on their id
-app.get("/api/notes/:id", function(req, res) {
-    let noteList = JSON.parse(fs.readFileSync("./db/db.json", "utf8"));
-    res.json(noteList[parseInt(req.params.id)]);
-});
-
+//delete note based on their id
 app.delete("/api/notes/:id", function(req, res) {
     let noteList = JSON.parse(fs.readFileSync("./db/db.json", "utf8"));
     let noteId = (req.params.id).toString();
-    console.log(noteId);
 
-    for(var i = 0; i < noteList.length; i++){
-        if(noteList[i] === noteId){
-            res.send(noteList[i])
-        }else{
-            noteList.splice(i,1);
-            break;
-        }
-    }
+    //filter all notes that does not have matching id and saved them as a new array
+    //the matching array will be deleted
+    noteList = noteList.filter(selected =>{
+        return selected.id != noteId;
+    })
 
+    //write the updated data to db.json and display the updated note
     fs.writeFileSync("./db/db.json", JSON.stringify(noteList));
     res.json(noteList);
 
